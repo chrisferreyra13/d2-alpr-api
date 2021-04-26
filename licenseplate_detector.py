@@ -1,9 +1,10 @@
 import argparse
+import cv2
 
-from transformers.detectron2.load_test_images import LoadTestImages
-from transformers.detectron2.set_config import SetConfig
-from transformers.detectron2.samples_from_folder import SamplesFromFolder
-from transformers.detectron2.predictor import Predictor
+from detectron2.config import get_cfg
+from detectron2.engine import default_setup
+from detectron2.engine import DefaultPredictor
+
 
 
 class LicenseplateDetector():
@@ -11,7 +12,7 @@ class LicenseplateDetector():
         self.split_test='test' 
 
         self.args=argparse.Namespace(
-                    input='assets/datasets/licenseplates',
+                    input='assets/datasets/licenseplates/images/04ow1.jpg',
                     config_file='configs/lp_faster_rcnn_R_50_FPN_3x.yaml',
                     samples=1,
                     confidence_threshold=0.85,
@@ -27,34 +28,19 @@ class LicenseplateDetector():
             self.args.opts.append('MODEL.RETINANET.SCORE_THRESH_TEST')
             self.args.opts.append(str(self.args.confidence_threshold))
         
-        # Create pipeline steps
-        load_test_images=LoadTestImages(self.args.input,self.split_test)    # TODO: Tener automatizado para, mediante un arg, saber que Loader usar (VOC, COCO, etc...)
         
-        samples_from_folder = SamplesFromFolder(self.args.samples)
-        set_config=SetConfig(self.args)
-        predictor=Predictor()
-
-        # Create licenseplate detection pipeline
-
-        prediction_pipeline = (
-            load_test_images  |
-            samples_from_folder   | #TODO: Mejorar el orden
-            set_config  |
-            predictor
-
-        )
-        result={}
-        try:
-            for r in prediction_pipeline:
-                result=r
-                
-        except StopIteration:
-            print("Error in prediction")
+        cfg = get_cfg()
+        cfg.merge_from_file(self.args.config_file)
+        cfg.merge_from_list(self.args.opts)
+        cfg.freeze()
+        default_setup(cfg, self.args)
         
-        
-        
+        predictor = DefaultPredictor(cfg)
+        img = cv2.imread(self.input)
+        prediction = predictor(img)
+                   
         pred_boxes=[]
-        output_pred_boxes=result["prediction"]["instances"].pred_boxes
+        output_pred_boxes=prediction["prediction"]["instances"].pred_boxes
 
         for box in output_pred_boxes:
             pred_boxes.append(box.cpu().numpy().tolist())
