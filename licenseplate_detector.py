@@ -19,7 +19,7 @@ class LicenseplateDetector():
                     opts=['MODEL.WEIGHTS', 'output/model_final.pth']
                     )
 
-    def detect(self, features: dict):
+    def detect(self, img: dict):
 
         if self.args.confidence_threshold is not None:
             # Set score_threshold for builtin models
